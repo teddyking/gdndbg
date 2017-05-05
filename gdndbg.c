@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 static const char *DEPOT_DIR_PATH = "/var/vcap/data/garden/depot";
+static const int MAX_CONTAINERS = 250;
 
 void print_usage(char *argv[]) {
   printf("\nUsage %s <command>\n\n", argv[0]);
@@ -20,6 +21,8 @@ void print_usage(char *argv[]) {
 void containers() {
   DIR *depot;
   struct dirent *dir;
+  int container_count = 0;
+  char *container_handles[MAX_CONTAINERS];
 
   depot = opendir(DEPOT_DIR_PATH);
 
@@ -29,11 +32,22 @@ void containers() {
       int ret;
 
       ret = strcmp(dir_name, ".");
-      if (ret != 0)
+      if (ret != 0) {
         ret = strcmp(dir_name, "..");
-          if (ret != 0)
-            if (dir_name[0] != '.')
-              printf("%s\n", dir_name);
+        if (ret != 0) {
+          if (dir_name[0] != '.') {
+            if (container_count < MAX_CONTAINERS) {
+              container_handles[container_count] = dir_name;
+              container_count++;
+            }
+          }
+        }
+      }
+    }
+
+    printf("container count: %d\n\n", container_count);
+    for (int i = 0; i < container_count; i++) {
+      printf("%s\n", container_handles[i]);
     }
 
     closedir(depot);
@@ -47,8 +61,6 @@ int is_directory(const char *path) {
 }
 
 int main(int argc, char *argv[]) {
-  printf("=== gdndbg ===\n");
-
   if (argc < 2)
     print_usage(argv);
 
