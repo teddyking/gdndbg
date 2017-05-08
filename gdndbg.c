@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,6 +10,27 @@
 static const char *DEPOT_DIR_PATH = "/var/vcap/data/garden/depot";
 static const int MAX_CONTAINERS = 250;
 
+void Containers();
+
+struct Container {
+  char *handle;
+};
+
+struct Container *Container_create(char *handle) {
+  struct Container *c = malloc(sizeof(struct Container));
+  assert(c != NULL);
+
+  c->handle = strdup(handle);
+
+  return c;
+}
+
+void Container_destroy(struct Container *c) {
+  assert(c != NULL);
+  free(c->handle);
+  free(c);
+}
+
 void print_usage(char *argv[]) {
   printf("\nUsage %s <command>\n\n", argv[0]);
   printf("Available commands:\n");
@@ -18,11 +40,11 @@ void print_usage(char *argv[]) {
   exit(1);
 }
 
-void containers() {
+void Containers() {
   DIR *depot;
   struct dirent *dir;
   int container_count = 0;
-  char *container_handles[MAX_CONTAINERS];
+  struct Container *container_handles[MAX_CONTAINERS];
 
   depot = opendir(DEPOT_DIR_PATH);
 
@@ -37,7 +59,9 @@ void containers() {
         if (ret != 0) {
           if (dir_name[0] != '.') {
             if (container_count < MAX_CONTAINERS) {
-              container_handles[container_count] = dir_name;
+              struct Container *c = Container_create(dir_name);
+
+              container_handles[container_count] = c;
               container_count++;
             }
           }
@@ -47,7 +71,8 @@ void containers() {
 
     printf("container count: %d\n\n", container_count);
     for (int i = 0; i < container_count; i++) {
-      printf("%s\n", container_handles[i]);
+      printf("%s\n", container_handles[i]->handle);
+      Container_destroy(container_handles[i]);
     }
 
     closedir(depot);
@@ -57,7 +82,7 @@ void containers() {
 int is_directory(const char *path) {
   struct stat path_stat;
   stat(path, &path_stat);
-  return  S_ISDIR(path_stat.st_mode);
+  return S_ISDIR(path_stat.st_mode);
 }
 
 int main(int argc, char *argv[]) {
@@ -67,7 +92,7 @@ int main(int argc, char *argv[]) {
   char command = argv[1][0];
   switch (command) {
     case 'c':
-      containers();
+      Containers();
       exit(0);
     case 'h':
       print_usage(argv);
