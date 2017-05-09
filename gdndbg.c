@@ -6,13 +6,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "gdndbg.h"
 
 static const char *DEPOT_DIR_PATH = "/var/vcap/data/garden/depot";
 static const int MAX_CONTAINERS = 250;
-
-void Containers();
-int container_pid(const char *bundle_path);
-char *container_bundle_path(const char *handle);
 
 struct Container {
   char *handle;
