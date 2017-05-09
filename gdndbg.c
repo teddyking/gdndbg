@@ -11,16 +11,24 @@ static const char *DEPOT_DIR_PATH = "/var/vcap/data/garden/depot";
 static const int MAX_CONTAINERS = 250;
 
 void Containers();
+int container_pid(const char *bundle_path);
+char *container_bundle_path(const char *handle);
 
 struct Container {
   char *handle;
+  int pid;
 };
 
 struct Container *Container_create(char *handle) {
   struct Container *c = malloc(sizeof(struct Container));
   assert(c != NULL);
 
+  char *bundle_path = container_bundle_path(handle);
+
   c->handle = strdup(handle);
+  c->pid = container_pid(bundle_path);
+
+  free(bundle_path);
 
   return c;
 }
@@ -71,7 +79,7 @@ void Containers() {
 
     printf("container count: %d\n\n", container_count);
     for (int i = 0; i < container_count; i++) {
-      printf("%s\n", container_handles[i]->handle);
+      printf("%s - %d\n", container_handles[i]->handle, container_handles[i]->pid);
       Container_destroy(container_handles[i]);
     }
 
@@ -83,6 +91,32 @@ int is_directory(const char *path) {
   struct stat path_stat;
   stat(path, &path_stat);
   return S_ISDIR(path_stat.st_mode);
+}
+
+int container_pid(const char *bundle_path) {
+  char pidfile_path[strlen(bundle_path) + 9];
+  strcpy(pidfile_path, bundle_path);
+  strcat(pidfile_path, "/");
+  strcat(pidfile_path, "pidfile");
+
+  int pid = 0;
+  FILE *pidfile;
+  pidfile = fopen(pidfile_path, "r");
+  if (pidfile != NULL) {
+    fscanf(pidfile, "%d", &pid);
+    fclose(pidfile);
+  }
+
+  return pid;
+}
+
+char *container_bundle_path(const char *handle) {
+  char *bundle_path = malloc(strlen(DEPOT_DIR_PATH) + strlen(handle) + 2);
+  strcpy(bundle_path, DEPOT_DIR_PATH);
+  strcat(bundle_path, "/");
+  strcat(bundle_path, handle);
+
+  return bundle_path;
 }
 
 int main(int argc, char *argv[]) {
