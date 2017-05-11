@@ -64,18 +64,12 @@ void Containers() {
       char *dir_name = dir->d_name;
       int ret;
 
-      ret = strcmp(dir_name, ".");
-      if (ret != 0) {
-        ret = strcmp(dir_name, "..");
-        if (ret != 0) {
-          if (dir_name[0] != '.') {
-            if (container_count < MAX_CONTAINERS) {
-              struct Container *c = Container_create(dir_name);
+      if (is_container_dir(dir_name)) {
+        if (container_count < MAX_CONTAINERS) {
+          struct Container *c = Container_create(dir_name);
 
-              containers[container_count] = c;
-              container_count++;
-            }
-          }
+          containers[container_count] = c;
+          container_count++;
         }
       }
     }
@@ -90,10 +84,20 @@ void Containers() {
   }
 }
 
-int is_directory(const char *path) {
-  struct stat path_stat;
-  stat(path, &path_stat);
-  return S_ISDIR(path_stat.st_mode);
+int is_container_dir(const char *dir_name) {
+  int ret;
+
+  ret = strcmp(dir_name, ".");
+  if (ret != 0) {
+    ret = strcmp(dir_name, "..");
+    if (ret != 0) {
+      if (dir_name[0] != '.') {
+        return 1;
+      }
+    }
+  }
+
+  return 0;
 }
 
 int container_pid(const char *bundle_path) {
