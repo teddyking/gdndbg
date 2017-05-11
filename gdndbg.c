@@ -30,6 +30,12 @@ struct Container *Container_create(char *handle) {
   return c;
 }
 
+void Container_show(struct Container *c) {
+  printf(
+    "%s - %d\n", c->handle, c->pid
+  );
+}
+
 void Container_destroy(struct Container *c) {
   assert(c != NULL);
   free(c->handle);
@@ -49,7 +55,7 @@ void Containers() {
   DIR *depot;
   struct dirent *dir;
   int container_count = 0;
-  struct Container *container_handles[MAX_CONTAINERS];
+  struct Container *containers[MAX_CONTAINERS];
 
   depot = opendir(DEPOT_DIR_PATH);
 
@@ -66,7 +72,7 @@ void Containers() {
             if (container_count < MAX_CONTAINERS) {
               struct Container *c = Container_create(dir_name);
 
-              container_handles[container_count] = c;
+              containers[container_count] = c;
               container_count++;
             }
           }
@@ -76,8 +82,8 @@ void Containers() {
 
     printf("container count: %d\n\n", container_count);
     for (int i = 0; i < container_count; i++) {
-      printf("%s - %d\n", container_handles[i]->handle, container_handles[i]->pid);
-      Container_destroy(container_handles[i]);
+      Container_show(containers[i]);
+      Container_destroy(containers[i]);
     }
 
     closedir(depot);
