@@ -14,6 +14,7 @@ static const int MAX_CONTAINERS = 250;
 struct Container {
   char *handle;
   int pid;
+  char *mnt_inode;
 };
 
 struct Container *Container_create(char *handle) {
@@ -24,21 +25,39 @@ struct Container *Container_create(char *handle) {
 
   c->handle = strdup(handle);
   c->pid = container_pid(bundle_path);
+  c->mnt_inode = Inode("mnt", c->pid);
 
   free(bundle_path);
 
   return c;
 }
 
+char *Inode(char *ns, int pid) {
+  char readlink_ns_buf[24] = "";
+  char ns_link_path[24] = "";
+  ssize_t len = 0;
+
+  sprintf(ns_link_path, "/proc/%d/ns/%s", pid, ns);
+
+  if ((len = readlink(ns_link_path, readlink_ns_buf, sizeof(readlink_ns_buf)-1)) > 0) {
+    readlink_ns_buf[len] = '\0';
+
+    return strdup(readlink_ns_buf);
+  }
+
+  return strdup("N/A");
+}
+
 void Container_show(struct Container *c) {
   printf(
-    "%s - %d\n", c->handle, c->pid
+    "%s - %d - '%s'\n", c->handle, c->pid, c->mnt_inode
   );
 }
 
 void Container_destroy(struct Container *c) {
   assert(c != NULL);
   free(c->handle);
+  free(c->mnt_inode);
   free(c);
 }
 
@@ -62,7 +81,6 @@ void Containers() {
   if (depot) {
     while ((dir = readdir(depot)) != NULL) {
       char *dir_name = dir->d_name;
-      int ret;
 
       if (is_container_dir(dir_name)) {
         if (container_count < MAX_CONTAINERS) {
