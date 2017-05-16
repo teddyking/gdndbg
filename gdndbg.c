@@ -8,13 +8,24 @@
 #include <unistd.h>
 #include "gdndbg.h"
 
+#define NAMESPACES_COUNT  7
+
 static const char *DEPOT_DIR_PATH = "/var/vcap/data/garden/depot";
 static const int MAX_CONTAINERS = 250;
+static char *NAMESPACES[NAMESPACES_COUNT] = {
+  "cgroup",
+  "ipc",
+  "mnt",
+  "net",
+  "pid",
+  "user",
+  "uts",
+};
 
 struct Container {
   char *handle;
   int pid;
-  char *namespaces[7];
+  char *namespaces[NAMESPACES_COUNT];
 };
 
 struct Container *Container_create(char *handle) {
@@ -25,13 +36,9 @@ struct Container *Container_create(char *handle) {
 
   c->handle = strdup(handle);
   c->pid = container_pid(bundle_path);
-  c->namespaces[0] = Inode("cgroup", c->pid);
-  c->namespaces[1] = Inode("ipc", c->pid);
-  c->namespaces[2] = Inode("mnt", c->pid);
-  c->namespaces[3] = Inode("net", c->pid);
-  c->namespaces[4] = Inode("pid", c->pid);
-  c->namespaces[5] = Inode("user", c->pid);
-  c->namespaces[6] = Inode("uts", c->pid);
+  for (int i = 0; i < NAMESPACES_COUNT; i++) {
+    c->namespaces[i] = Inode(NAMESPACES[i], c->pid);
+  }
 
   free(bundle_path);
 
@@ -56,27 +63,23 @@ char *Inode(char *ns, int pid) {
 
 void Container_show(struct Container *c) {
   printf("Handle: %s\n", c->handle);
-  printf("PID: %d\n", c->pid);
+  if (c->pid == 0) {
+    printf("PID: N/A\n");
+  } else {
+    printf("PID: %d\n", c->pid);
+  }
   printf("Namespaces:\n");
-  printf("\t%s\n", c->namespaces[0]);
-  printf("\t%s\n", c->namespaces[1]);
-  printf("\t%s\n", c->namespaces[2]);
-  printf("\t%s\n", c->namespaces[3]);
-  printf("\t%s\n", c->namespaces[4]);
-  printf("\t%s\n", c->namespaces[5]);
-  printf("\t%s\n", c->namespaces[6]);
+  for (int i = 0; i < NAMESPACES_COUNT; i++) {
+    printf("\t%s\n", c->namespaces[i]);
+  }
 }
 
 void Container_destroy(struct Container *c) {
   assert(c != NULL);
   free(c->handle);
-  free(c->namespaces[0]);
-  free(c->namespaces[1]);
-  free(c->namespaces[2]);
-  free(c->namespaces[3]);
-  free(c->namespaces[4]);
-  free(c->namespaces[5]);
-  free(c->namespaces[6]);
+  for (int i = 0; i < NAMESPACES_COUNT; i++) {
+    free(c->namespaces[i]);
+  }
   free(c);
 }
 
