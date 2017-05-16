@@ -22,10 +22,39 @@ static char *NAMESPACES[NAMESPACES_COUNT] = {
   "uts",
 };
 
+struct Namespace {
+  char *name;
+  unsigned long long inode;
+};
+
+struct Namespace *Namespace_create(char *name, int pid) {
+  struct Namespace *n = malloc(sizeof(struct Namespace));
+
+  n->name = strdup(name);
+  n->inode = 0;
+
+  if (pid > 0) {
+    char *inode = Inode(name, pid);
+    char *inode_stripped = strdup(&inode[strlen(name) + 2]);
+    inode_stripped[(strlen(inode_stripped)-1)] = '\0';
+    n->inode = strtoull(inode_stripped, NULL, 10);
+    free(inode);
+    free(inode_stripped);
+  }
+
+  return n;
+}
+
+void Namespace_destroy(struct Namespace *n) {
+  assert(n != NULL);
+  free(n->name);
+  free(n);
+}
+
 struct Container {
   char *handle;
   int pid;
-  char *namespaces[NAMESPACES_COUNT];
+  struct Namespace *namespaces[NAMESPACES_COUNT];
 };
 
 struct Container *Container_create(char *handle) {
@@ -37,7 +66,7 @@ struct Container *Container_create(char *handle) {
   c->handle = strdup(handle);
   c->pid = container_pid(bundle_path);
   for (int i = 0; i < NAMESPACES_COUNT; i++) {
-    c->namespaces[i] = Inode(NAMESPACES[i], c->pid);
+    c->namespaces[i] = Namespace_create(NAMESPACES[i], c->pid);
   }
 
   free(bundle_path);
@@ -70,7 +99,7 @@ void Container_show(struct Container *c) {
   }
   printf("Namespaces:\n");
   for (int i = 0; i < NAMESPACES_COUNT; i++) {
-    printf("\t%s\n", c->namespaces[i]);
+    printf("\t%s:[%llu]\n", c->namespaces[i]->name, c->namespaces[i]->inode);
   }
 }
 
@@ -78,6 +107,7 @@ void Container_destroy(struct Container *c) {
   assert(c != NULL);
   free(c->handle);
   for (int i = 0; i < NAMESPACES_COUNT; i++) {
+    free(c->namespaces[i]->name);
     free(c->namespaces[i]);
   }
   free(c);
